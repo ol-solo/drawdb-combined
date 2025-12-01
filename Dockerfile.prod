@@ -5,7 +5,8 @@
 FROM node:20-alpine AS frontend-build
 WORKDIR /app/client
 COPY client/package*.json ./
-RUN npm ci
+# Use npm install instead of npm ci for better compatibility
+RUN npm install
 COPY client/ ./
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 # Set VITE_BACKEND_URL to empty string for combined deployment (uses relative URLs)
