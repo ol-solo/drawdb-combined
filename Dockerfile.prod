@@ -12,10 +12,8 @@ COPY client/package*.json ./
 # Note: If behind proxy, pass build args: --build-arg HTTP_PROXY=... --build-arg HTTPS_PROXY=...
 ARG HTTP_PROXY
 ARG HTTPS_PROXY
-ARG NO_PROXY
 ENV HTTP_PROXY=${HTTP_PROXY}
 ENV HTTPS_PROXY=${HTTPS_PROXY}
-ENV NO_PROXY=${NO_PROXY}
 
 # Install dependencies with error checking
 RUN npm install --loglevel=verbose 2>&1 | tee /tmp/npm-install.log || \
