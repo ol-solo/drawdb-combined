@@ -28,8 +28,8 @@ services:
     volumes:
       # Mount SSL certificates (optional - only if you have them)
       - ./config/ssl:/etc/nginx/ssl:ro
-      # Mount nginx config (optional - for custom nginx config)
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Note: nginx.conf is generated at runtime based on SSL certificate availability
+      # To use custom nginx config, mount it: - ./nginx/nginx.conf:/etc/nginx/nginx.conf.full:ro
     networks:
       - drawdb-network
     healthcheck:

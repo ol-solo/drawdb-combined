@@ -62,8 +62,12 @@ COPY --from=backend-build /app/server/dist ./dist
 # Copy frontend build
 COPY --from=frontend-build /app/client/dist ./client-dist
 
-# Copy nginx configuration
-COPY nginx/nginx.conf /etc/nginx/nginx.conf
+# Copy nginx configuration (full version with HTTPS)
+COPY nginx/nginx.conf /etc/nginx/nginx.conf.full
+
+# Copy nginx config generator script
+COPY nginx/generate-nginx-config.sh /usr/local/bin/generate-nginx-config.sh
+RUN chmod +x /usr/local/bin/generate-nginx-config.sh
 
 # Create SSL directory (certificates are mounted as volume, not copied)
 # This ensures the directory exists even if certificates aren't provided
@@ -75,7 +79,7 @@ RUN echo '[supervisord]' > /etc/supervisord.conf && \
     echo 'nodaemon=true' >> /etc/supervisord.conf && \
     echo '' >> /etc/supervisord.conf && \
     echo '[program:nginx]' >> /etc/supervisord.conf && \
-    echo 'command=nginx -g "daemon off;"' >> /etc/supervisord.conf && \
+    echo 'command=sh -c "/usr/local/bin/generate-nginx-config.sh && nginx -g \"daemon off;\""' >> /etc/supervisord.conf && \
     echo 'autostart=true' >> /etc/supervisord.conf && \
     echo 'autorestart=true' >> /etc/supervisord.conf && \
     echo 'stderr_logfile=/var/log/nginx/error.log' >> /etc/supervisord.conf && \
