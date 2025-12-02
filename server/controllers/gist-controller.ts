@@ -135,7 +135,7 @@ async function update(req: Request, res: Response) {
 
 async function del(req: Request, res: Response) {
   try {
-    GistService.deleteGist(req.params.id);
+    await GistService.deleteGist(req.params.id);
 
     res.status(200).json({
       success: true,
