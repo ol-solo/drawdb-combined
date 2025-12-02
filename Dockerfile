@@ -65,6 +65,11 @@ COPY --from=frontend-build /app/client/dist ./client-dist
 # Copy nginx configuration
 COPY nginx/nginx.conf /etc/nginx/nginx.conf
 
+# Create SSL directory (certificates are mounted as volume, not copied)
+# This ensures the directory exists even if certificates aren't provided
+# Certificates should be mounted via docker-compose.yml volume: ./config/ssl:/etc/nginx/ssl:ro
+RUN mkdir -p /etc/nginx/ssl
+
 # Create supervisor config to run both nginx and node
 RUN echo '[supervisord]' > /etc/supervisord.conf && \
     echo 'nodaemon=true' >> /etc/supervisord.conf && \
