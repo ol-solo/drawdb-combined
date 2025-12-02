@@ -50,8 +50,7 @@ FROM node:20-alpine AS production
 WORKDIR /app
 
 # Install nginx, curl, and supervisor
-RUN apk add --no-cache nginx curl supervisor python3 py3-pip && \
-    pip3 install supervisor
+RUN apk add --no-cache nginx curl supervisor
 
 # Copy backend dependencies and built files
 COPY --from=backend-build /app/server/package*.json ./
