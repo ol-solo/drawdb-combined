@@ -19,7 +19,8 @@ if [ -f "$SSL_CERT" ] && [ -f "$SSL_KEY" ]; then
 else
     echo "No SSL certificates found - HTTP only mode"
     # Create HTTP-only config
-    cat > "$NGINX_CONF" << EOF
+    SERVER_NAME_PLACEHOLDER="__SERVER_NAME__"
+    cat > "$NGINX_CONF" << 'EOF'
 user nginx;
 worker_processes auto;
 error_log /var/log/nginx/error.log warn;
@@ -61,7 +62,7 @@ http {
 
     server {
         listen 80;
-        server_name $SERVER_NAME;
+        server_name __SERVER_NAME__;
         
         location /.well-known/acme-challenge/ {
             root /var/www/certbot;
@@ -93,6 +94,9 @@ http {
     }
 }
 EOF
+    # Replace placeholder with actual server name (escaped for sed)
+    ESCAPED_SERVER_NAME=$(printf '%s\n' "$SERVER_NAME" | sed -e 's/[\/&]/\\&/g')
+    sed -i "s/${SERVER_NAME_PLACEHOLDER}/${ESCAPED_SERVER_NAME}/g" "$NGINX_CONF"
 fi
 
 # Copy generated config to final location (if not mounted)
