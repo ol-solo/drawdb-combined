@@ -34,7 +34,15 @@ COPY client/ ./
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 # Set VITE_BACKEND_URL to empty string for combined deployment (uses relative URLs)
 ENV VITE_BACKEND_URL=""
-RUN npm run build
+
+# Build using npx to ensure vite is found
+RUN npx vite build || \
+    (echo "=== Build failed ===" && \
+     echo "Checking vite location:" && \
+     which vite || echo "vite not in PATH" && \
+     ls -la node_modules/.bin/ | grep vite && \
+     echo "Trying direct path:" && \
+     ./node_modules/.bin/vite build || exit 1)
 
 # Stage 2: Build backend
 FROM node:20-alpine AS backend-build
