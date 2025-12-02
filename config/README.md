@@ -22,6 +22,7 @@ nano .env
 - None! All variables are optional.
 
 **Optional:**
+- `SERVER_NAME` - Domain name for Nginx (e.g., `mycompany.com`). Defaults to `_` (accepts any domain). Set this for better security when using SSL certificates.
 - `GITHUB_TOKEN` - Only needed if you want to use the sharing feature
 - `MAIL_*` - Only needed if you want to use email features
 - `CLIENT_URLS` - Only needed for CORS configuration
@@ -32,12 +33,16 @@ nano .env
 If you want HTTPS, place your certificates in the `ssl/` directory:
 
 ```bash
-# Your own certificates
-cp your-cert.pem ssl/cert.pem
-cp your-key.pem ssl/key.pem
+# Your own certificates (rename .crt/.key to .pem)
+cp mycompany.com.crt ssl/cert.pem
+cp mycompany.com.key ssl/key.pem
 
-# Or use Let's Encrypt (mount the directory in docker-compose.yml)
+# Set proper permissions
+chmod 644 ssl/cert.pem
+chmod 600 ssl/key.pem
 ```
+
+**Important:** Also set `SERVER_NAME=mycompany.com` in your `.env` file to restrict Nginx to your domain for better security.
 
 If SSL certificates are not provided, the application will run on HTTP (port 80).
 

@@ -29,9 +29,16 @@ nano config/.env
 If you want HTTPS, place certificates in `config/ssl/`:
 
 ```bash
-cp your-cert.pem config/ssl/cert.pem
-cp your-key.pem config/ssl/key.pem
+# Copy your certificates (rename .crt/.key to .pem)
+cp mycompany.com.crt config/ssl/cert.pem
+cp mycompany.com.key config/ssl/key.pem
+
+# Set proper permissions
+chmod 644 config/ssl/cert.pem
+chmod 600 config/ssl/key.pem
 ```
+
+**Important:** Set `SERVER_NAME=mycompany.com` in `config/.env` to restrict Nginx to your domain for better security.
 
 If no certificates are provided, the app runs on HTTP (port 80).
 
@@ -57,6 +64,10 @@ All configuration is in the `config/` directory:
 ### Environment Variables (all optional)
 
 ```bash
+# Server name for Nginx (recommended when using SSL)
+# Set to your domain name for better security
+SERVER_NAME=mycompany.com
+
 # GitHub token (only if you need sharing feature)
 GITHUB_TOKEN=your_token_here
 
@@ -87,10 +98,26 @@ HTTP_PORT=8080 HTTPS_PORT=8443 APP_PORT=5000 docker compose up
 
 ## Production Deployment
 
-1. Place SSL certificates in `config/ssl/`
-2. Configure `config/.env` with your settings
-3. Update `nginx/nginx.conf` if needed (server_name, etc.)
-4. Run: `docker compose up -d --build`
+1. Place SSL certificates in `config/ssl/`:
+   ```bash
+   cp mycompany.com.crt config/ssl/cert.pem
+   cp mycompany.com.key config/ssl/key.pem
+   chmod 644 config/ssl/cert.pem
+   chmod 600 config/ssl/key.pem
+   ```
+
+2. Configure `config/.env` with your settings:
+   ```bash
+   SERVER_NAME=mycompany.com
+   GITHUB_TOKEN=your_token_here
+   # ... other settings
+   ```
+
+3. Run: `docker compose up -d --build`
+
+4. Configure DNS: Point `mycompany.com` A record to your server's IP address
+
+5. Access: `https://mycompany.com`
 
 ## Architecture
 

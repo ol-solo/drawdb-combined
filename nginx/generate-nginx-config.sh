@@ -6,15 +6,20 @@ NGINX_CONF_FINAL="/etc/nginx/nginx.conf"
 SSL_CERT="/etc/nginx/ssl/cert.pem"
 SSL_KEY="/etc/nginx/ssl/key.pem"
 
+# Get server name from environment (default to _ if not set)
+SERVER_NAME="${SERVER_NAME:-_}"
+
 # Check if SSL certificates exist
 if [ -f "$SSL_CERT" ] && [ -f "$SSL_KEY" ]; then
     echo "SSL certificates found - enabling HTTPS"
     # Use full config with HTTPS
     cp /etc/nginx/nginx.conf.full "$NGINX_CONF"
+    # Replace server_name placeholder with actual domain
+    sed -i "s/server_name _;/server_name $SERVER_NAME;/g" "$NGINX_CONF"
 else
     echo "No SSL certificates found - HTTP only mode"
     # Create HTTP-only config
-    cat > "$NGINX_CONF" << 'EOF'
+    cat > "$NGINX_CONF" << EOF
 user nginx;
 worker_processes auto;
 error_log /var/log/nginx/error.log warn;
@@ -56,7 +61,7 @@ http {
 
     server {
         listen 80;
-        server_name _;
+        server_name $SERVER_NAME;
         
         location /.well-known/acme-challenge/ {
             root /var/www/certbot;
