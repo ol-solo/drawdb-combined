@@ -3,6 +3,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.prod
+      args:
+        - HTTP_PROXY=${HTTP_PROXY:-}
+        - HTTPS_PROXY=${HTTPS_PROXY:-}
+        - NO_PROXY=${NO_PROXY:-}
     container_name: drawdb-app
     restart: unless-stopped
     # Internal port only - nginx will handle 443

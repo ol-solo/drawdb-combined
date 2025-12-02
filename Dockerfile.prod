@@ -4,10 +4,33 @@
 # Stage 1: Build frontend
 FROM node:20-alpine AS frontend-build
 WORKDIR /app/client
+
+# Copy package files
 COPY client/package*.json ./
-# Use npm install instead of npm ci for better compatibility
-RUN npm install
+
+# Install dependencies
+# Note: If behind proxy, pass build args: --build-arg HTTP_PROXY=... --build-arg HTTPS_PROXY=...
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+ENV HTTP_PROXY=${HTTP_PROXY}
+ENV HTTPS_PROXY=${HTTPS_PROXY}
+ENV NO_PROXY=${NO_PROXY}
+
+# Install dependencies with error checking
+RUN npm install --loglevel=verbose 2>&1 | tee /tmp/npm-install.log || \
+    (echo "=== npm install failed ===" && cat /tmp/npm-install.log && exit 1)
+
+# Verify vite was installed
+RUN test -f node_modules/.bin/vite || \
+    (echo "=== vite not found ===" && \
+     echo "node_modules/.bin contents:" && ls -la node_modules/.bin/ | head -20 && \
+     echo "node_modules exists:" && test -d node_modules && echo "yes" || echo "no" && \
+     exit 1)
+
+# Copy rest of client files
 COPY client/ ./
+
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 # Set VITE_BACKEND_URL to empty string for combined deployment (uses relative URLs)
 ENV VITE_BACKEND_URL=""
