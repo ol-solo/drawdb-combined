@@ -5,12 +5,13 @@
 FROM node:20-alpine AS frontend-build
 WORKDIR /app/client
 COPY client/package*.json ./
-RUN npm ci
+# Force-install devDependencies (like Vite) even if NODE_ENV/NPM config say otherwise
+RUN NODE_ENV=development npm_config_production=false npm ci
 COPY client/ ./
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 # Set VITE_BACKEND_URL to empty string for combined deployment (uses relative URLs)
 ENV VITE_BACKEND_URL=""
-RUN npm run build
+RUN NODE_ENV=production npm run build
 
 # Stage 2: Build backend
 FROM node:20-alpine AS backend-build
