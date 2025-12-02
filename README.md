@@ -1,110 +1,144 @@
 # DrawDB Combined
 
-This is a combined single-folder setup that includes both the frontend (client) and backend (server) in one container.
+A unified single-container setup for DrawDB with nginx reverse proxy.
 
-## Folder Structure
+## Features
 
-```
-drawdb-combined/
-├── client/              # Frontend React application
-│   ├── src/
-│   ├── package.json
-│   └── ...
-├── server/              # Backend Express server
-│   ├── src/
-│   ├── package.json
-│   └── ...
-├── Dockerfile           # Combined Dockerfile
-├── docker-compose.yml   # Docker Compose configuration
-└── README.md            # This file
-```
+- ✅ Single Dockerfile and docker-compose.yml
+- ✅ Nginx and application in one container
+- ✅ Optional SSL/HTTPS support
+- ✅ Optional GitHub token (for sharing feature)
+- ✅ Optional proxy support
+- ✅ Automatic restart on failure
+- ✅ All configuration in one place (`config/` directory)
 
 ## Quick Start
 
-### Using Docker Compose (Recommended)
+### 1. Setup Configuration
 
-1. **Create a `.env` file** in the `drawdb-combined` directory:
+```bash
+# Copy example environment file
+cp config/.env.example config/.env
 
-```env
-PORT=5000
-GITHUB_TOKEN=your_github_token_here
+# Edit if needed (all variables are optional)
+nano config/.env
+```
+
+### 2. SSL Certificates (Optional)
+
+If you want HTTPS, place certificates in `config/ssl/`:
+
+```bash
+cp your-cert.pem config/ssl/cert.pem
+cp your-key.pem config/ssl/key.pem
+```
+
+If no certificates are provided, the app runs on HTTP (port 80).
+
+### 3. Build and Run
+
+```bash
+docker compose up -d --build
+```
+
+### 4. Access
+
+- **HTTP**: http://localhost (or your domain)
+- **HTTPS**: https://localhost (if SSL certificates are provided)
+- **Direct app**: http://localhost:5000
+
+## Configuration
+
+All configuration is in the `config/` directory:
+
+- `config/.env` - Environment variables (create from `.env.example`)
+- `config/ssl/` - SSL certificates (optional)
+
+### Environment Variables (all optional)
+
+```bash
+# GitHub token (only if you need sharing feature)
+GITHUB_TOKEN=your_token_here
+
+# Email (only if you need email features)
 MAIL_SERVICE=gmail
 MAIL_USERNAME=your_email@gmail.com
 MAIL_PASSWORD=your_app_password
-CLIENT_URLS=http://localhost:5000
+
+# CORS origins
+CLIENT_URLS=https://mycompany.com
+
+# Proxy (only if behind proxy)
+HTTP_PROXY=http://proxy.example.com:443
+HTTPS_PROXY=http://proxy.example.com:443
 ```
 
-2. **Build and run:**
+## Ports
+
+- **80** - HTTP (redirects to HTTPS if SSL is configured)
+- **443** - HTTPS (only works if SSL certificates are provided)
+- **5000** - Direct application access (optional)
+
+You can customize ports via environment variables:
 
 ```bash
-cd drawdb-combined
-docker-compose up --build
+HTTP_PORT=8080 HTTPS_PORT=8443 APP_PORT=5000 docker compose up
 ```
 
-### Using Docker directly
+## Production Deployment
 
+1. Place SSL certificates in `config/ssl/`
+2. Configure `config/.env` with your settings
+3. Update `nginx/nginx.conf` if needed (server_name, etc.)
+4. Run: `docker compose up -d --build`
+
+## Architecture
+
+- **Single container** runs both nginx and the Node.js application
+- **Supervisor** manages both processes
+- **Nginx** handles SSL termination and reverse proxy
+- **Node.js** serves the application on port 5000 (internal)
+
+## Troubleshooting
+
+### Check logs
 ```bash
-cd drawdb-combined
-docker build -t drawdb-combined .
-docker run -p 5000:5000 \
-  -e PORT=5000 \
-  -e GITHUB_TOKEN=your_token \
-  -e MAIL_USERNAME=your_email \
-  -e MAIL_PASSWORD=your_password \
-  drawdb-combined
+docker compose logs -f
 ```
 
-## Access
-
-Once running, access the application at:
-- **Frontend & API**: `http://localhost:5000`
-- **API Endpoints**: 
-  - `http://localhost:5000/email/*`
-  - `http://localhost:5000/gists/*`
-
-The frontend is automatically served by the Express server, and API routes are available at the same origin (no CORS issues).
-
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port | `5000` |
-| `GITHUB_TOKEN` | GitHub token for gist operations | Required |
-| `MAIL_SERVICE` | Email service provider | `gmail` |
-| `MAIL_USERNAME` | Email username | Required |
-| `MAIL_PASSWORD` | Email password/app password | Required |
-| `CLIENT_URLS` | Comma-separated allowed CORS origins | Optional |
-
-## Development
-
-For development, you can still run frontend and backend separately:
-
-### Frontend (client)
+### Check container status
 ```bash
-cd client
-npm install
-npm run dev
+docker compose ps
 ```
 
-### Backend (server)
+### Restart services
 ```bash
-cd server
-npm install
-npm run dev
+docker compose restart
 ```
 
-## Production Build
+### SSL not working?
+- Verify certificates are in `config/ssl/`
+- Check file permissions
+- Verify certificate format (PEM)
 
-The Dockerfile uses a multi-stage build:
-1. Builds the frontend React app
-2. Builds the backend TypeScript server
-3. Combines both into a single production image
+### Proxy not working?
+- Check proxy settings in `config/.env`
+- Verify proxy URL and port
+- Test connectivity from container
 
-The frontend is built with `VITE_BACKEND_URL=""` to use relative URLs, eliminating CORS issues.
+## File Structure
 
-## Notes
-
-- The frontend automatically uses relative URLs when `VITE_BACKEND_URL` is empty
-- All API calls go through the same Express server
-- Single container deployment simplifies deployment and reduces resource usage
-
+```
+drawdb-combined/
+├── config/              # All configuration
+│   ├── .env            # Environment variables (create from .env.example)
+│   ├── .env.example    # Example environment file
+│   └── ssl/            # SSL certificates (optional)
+│       ├── cert.pem
+│       └── key.pem
+├── nginx/
+│   └── nginx.conf      # Nginx configuration
+├── Dockerfile          # Single unified Dockerfile
+├── docker-compose.yml  # Single unified docker-compose
+└── README.md           # This file
+```

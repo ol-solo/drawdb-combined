@@ -15,12 +15,13 @@ server/dist/
 .env.*.local
 .env.prod
 .env.production
+config/.env
 
 # SSL Certificates
-nginx/ssl/*.pem
-nginx/ssl/*.key
-nginx/ssl/*.crt
-!nginx/ssl/.gitkeep
+config/ssl/*.pem
+config/ssl/*.key
+config/ssl/*.crt
+!config/ssl/README.md
 
 # IDE
 .vscode/
