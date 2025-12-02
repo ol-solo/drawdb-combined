@@ -15,8 +15,9 @@ ARG HTTPS_PROXY
 ENV HTTP_PROXY=${HTTP_PROXY}
 ENV HTTPS_PROXY=${HTTPS_PROXY}
 
-# Install dependencies with error checking
-RUN npm install --loglevel=verbose 2>&1 | tee /tmp/npm-install.log || \
+# Install dependencies (force dev deps so vite exists even if NODE_ENV=production)
+RUN NODE_ENV=development npm_config_production=false \
+    npm install --loglevel=verbose 2>&1 | tee /tmp/npm-install.log || \
     (echo "=== npm install failed ===" && cat /tmp/npm-install.log && exit 1)
 
 # Verify vite was installed
@@ -33,8 +34,8 @@ ENV NODE_OPTIONS="--max-old-space-size=4096"
 # Set VITE_BACKEND_URL to empty string for combined deployment (uses relative URLs)
 ENV VITE_BACKEND_URL=""
 
-# Build using npx to ensure vite is found
-RUN npx vite build || \
+# Build using npx to ensure vite is found (set NODE_ENV=production for build)
+RUN NODE_ENV=production npx vite build || \
     (echo "=== Build failed ===" && \
      echo "Checking vite location:" && \
      which vite || echo "vite not in PATH" && \
