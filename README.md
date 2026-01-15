@@ -7,7 +7,7 @@ A unified single-container setup for DrawDB with nginx reverse proxy.
 - ✅ Single Dockerfile and docker-compose.yml
 - ✅ Nginx and application in one container
 - ✅ Optional SSL/HTTPS support
-- ✅ Optional GitHub token (for sharing feature)
+- ✅ Optional GitLab Project Repository (recommended) or GitHub token (sharing/versioning)
 - ✅ Optional proxy support
 - ✅ Automatic restart on failure
 - ✅ All configuration in one place (`config/` directory)
@@ -68,8 +68,18 @@ All configuration is in the `config/` directory:
 # Set to your domain name for better security
 SERVER_NAME=mycompany.com
 
-# GitHub token (only if you need sharing feature)
-GITHUB_TOKEN=your_token_here
+# Sharing provider (optional)
+# SHARE_PROVIDER=auto
+
+# GitLab Project Repository (recommended for sharing/versioning)
+# GITLAB_BASE_URL=https://gitlab.com
+# GITLAB_TOKEN=your_gitlab_token_here
+# GITLAB_PROJECT_ID=123456
+# GITLAB_REF=main
+# GITLAB_SHARES_PATH_PREFIX=shares
+
+# GitHub token (optional fallback)
+# GITHUB_TOKEN=your_token_here
 
 # Email (only if you need email features)
 MAIL_SERVICE=gmail
@@ -82,6 +92,17 @@ CLIENT_URLS=https://mycompany.com
 # Proxy (only if behind proxy)
 HTTP_PROXY=http://proxy.example.com:443
 HTTPS_PROXY=http://proxy.example.com:443
+```
+
+### GitLab shares repository bootstrap (optional)
+
+If you want the share/version feature backed by a dedicated GitLab project repository, create a project (e.g. `drawdb-shares`) and set `GITLAB_PROJECT_ID`.
+
+You can also create it via the included helper script:
+
+```bash
+cd server
+GITLAB_BASE_URL=https://gitlab.com GITLAB_TOKEN=... npx ts-node utils/create-gitlab-shares-project.ts
 ```
 
 ## Ports
@@ -109,7 +130,10 @@ HTTP_PORT=8080 HTTPS_PORT=8443 APP_PORT=5000 docker compose up
 2. Configure `config/.env` with your settings:
    ```bash
    SERVER_NAME=mycompany.com
-   GITHUB_TOKEN=your_token_here
+   # SHARE_PROVIDER=gitlab-repo
+   # GITLAB_BASE_URL=https://gitlab.com
+   # GITLAB_TOKEN=your_gitlab_token_here
+   # GITLAB_PROJECT_ID=123456
    # ... other settings
    ```
 
