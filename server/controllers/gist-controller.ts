@@ -5,11 +5,17 @@ import { getShareProvider } from '../services/providers';
 
 const provider = getShareProvider();
 
+function firstParam(value: string | string[] | undefined): string {
+  if (!value) return '';
+  return Array.isArray(value) ? value[0] : value;
+}
+
 async function get(req: Request, res: Response) {
   try {
+    const id = firstParam(req.params.id);
     res.status(200).json({
       success: true,
-      data: await provider.getShare({ id: req.params.id }),
+      data: await provider.getShare({ id }),
     });
   } catch (e) {
     console.error(e);
@@ -48,7 +54,8 @@ async function update(req: Request, res: Response) {
   try {
     const { filename, content } = req.body;
 
-    await provider.upsertShareFile({ id: req.params.id, filename, content });
+    const id = firstParam(req.params.id);
+    await provider.upsertShareFile({ id, filename, content });
 
     res.status(200).json({
       deleted: false,
@@ -73,7 +80,8 @@ async function update(req: Request, res: Response) {
 
 async function del(req: Request, res: Response) {
   try {
-    await provider.deleteShare({ id: req.params.id });
+    const id = firstParam(req.params.id);
+    await provider.deleteShare({ id });
 
     res.status(200).json({
       success: true,
@@ -99,7 +107,8 @@ async function getCommits(req: Request, res: Response) {
   try {
     const page = req.query.page ? parseInt(req.query.page as string) : undefined;
     const perPage = req.query.per_page ? parseInt(req.query.per_page as string) : undefined;
-    const cleanData = await provider.listCommits({ id: req.params.id, perPage, page });
+    const id = firstParam(req.params.id);
+    const cleanData = await provider.listCommits({ id, perPage, page });
 
     res.status(200).json({
       success: true,
@@ -122,9 +131,11 @@ async function getCommits(req: Request, res: Response) {
 
 async function getRevision(req: Request, res: Response) {
   try {
+    const id = firstParam(req.params.id);
+    const sha = firstParam(req.params.sha);
     res.status(200).json({
       success: true,
-      data: await provider.getShare({ id: req.params.id, ref: req.params.sha }),
+      data: await provider.getShare({ id, ref: sha }),
     });
   } catch (e) {
     if ((e as AxiosError).response?.status === 404) {
@@ -143,8 +154,8 @@ async function getRevision(req: Request, res: Response) {
 
 async function getRevisionsForFile(req: Request, res: Response) {
   try {
-    const gistId = req.params.id;
-    const file = req.params.file;
+    const gistId = firstParam(req.params.id);
+    const file = firstParam(req.params.file);
 
     const cursor = req.query.cursor as string;
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;

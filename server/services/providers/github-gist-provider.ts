@@ -4,6 +4,20 @@ import type { ShareCommitItem, ShareGetResult, ShareProvider, ShareFilesMap } fr
 
 const gistsBaseUrl = 'https://api.github.com/gists';
 
+type GithubGistFile = {
+  content?: string;
+};
+
+type GithubGistResponse = {
+  id: string;
+  files?: Record<string, GithubGistFile>;
+};
+
+type GithubGistCommitItem = {
+  version: string;
+  committed_at: string;
+};
+
 function getGithubHeaders() {
   return {
     'X-GitHub-Api-Version': '2022-11-28',
@@ -13,7 +27,7 @@ function getGithubHeaders() {
 
 export class GithubGistProvider implements ShareProvider {
   async createShareFile(params: { filename: string; content: string; description?: string }) {
-    const { data } = await axios.post(
+    const { data } = await axios.post<GithubGistResponse>(
       gistsBaseUrl,
       {
         description: params.description || '',
@@ -26,10 +40,7 @@ export class GithubGistProvider implements ShareProvider {
     );
 
     const files: ShareFilesMap = Object.fromEntries(
-      Object.entries(data.files || {}).map(([filename, file]: [string, any]) => [
-        filename,
-        { filename, content: file.content ?? '' },
-      ]),
+      Object.entries(data.files || {}).map(([filename, file]) => [filename, { filename, content: file.content ?? '' }]),
     );
 
     return { id: data.id, files };
@@ -49,13 +60,10 @@ export class GithubGistProvider implements ShareProvider {
 
   async getShare(params: { id: string; ref?: string }): Promise<ShareGetResult> {
     const url = params.ref ? `${gistsBaseUrl}/${params.id}/${params.ref}` : `${gistsBaseUrl}/${params.id}`;
-    const { data } = await axios.get(url, { headers: getGithubHeaders() });
+    const { data } = await axios.get<GithubGistResponse>(url, { headers: getGithubHeaders() });
 
     const files: ShareFilesMap = Object.fromEntries(
-      Object.entries(data.files || {}).map(([filename, file]: [string, any]) => [
-        filename,
-        { filename, content: file.content ?? '' },
-      ]),
+      Object.entries(data.files || {}).map(([filename, file]) => [filename, { filename, content: file.content ?? '' }]),
     );
 
     return { id: data.id, files };
@@ -66,15 +74,12 @@ export class GithubGistProvider implements ShareProvider {
   }
 
   async listCommits(params: { id: string; perPage?: number; page?: number }): Promise<ShareCommitItem[]> {
-    const { data } = await axios.get(`${gistsBaseUrl}/${params.id}/commits`, {
+    const { data } = await axios.get<GithubGistCommitItem[]>(`${gistsBaseUrl}/${params.id}/commits`, {
       headers: getGithubHeaders(),
       params: { per_page: params.perPage, page: params.page },
     });
 
-    return (data || []).map((c: any) => ({
-      version: c.version,
-      committed_at: c.committed_at,
-    }));
+    return (data || []).map((c) => ({ version: c.version, committed_at: c.committed_at }));
   }
 
   async listFileCommits(params: {

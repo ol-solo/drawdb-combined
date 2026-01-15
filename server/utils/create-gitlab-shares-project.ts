@@ -28,7 +28,6 @@ async function main() {
     { headers: { 'PRIVATE-TOKEN': token } },
   );
 
-  // eslint-disable-next-line no-console
   console.log(
     JSON.stringify(
       {
@@ -43,7 +42,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  // eslint-disable-next-line no-console
   console.error(e?.response?.data || e);
   process.exit(1);
 });

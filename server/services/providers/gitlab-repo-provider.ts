@@ -16,6 +16,11 @@ type GitLabTreeItem = {
   mode: string;
 };
 
+type GitLabCommit = {
+  id: string;
+  created_at: string;
+};
+
 function normalizeBaseUrl(baseUrl: string) {
   return baseUrl.replace(/\/+$/, '');
 }
@@ -206,7 +211,7 @@ export class GitlabRepoProvider implements ShareProvider {
     ensureConfigured();
 
     const apiBase = getGitlabApiBaseUrl();
-    const { data } = await axios.get(
+    const { data } = await axios.get<GitLabCommit[]>(
       `${apiBase}/projects/${encodeURIComponent(config.api.gitlab.projectId)}/repository/commits`,
       {
         headers: getGitlabHeaders(),
@@ -219,7 +224,7 @@ export class GitlabRepoProvider implements ShareProvider {
       },
     );
 
-    return (data || []).map((c: any) => ({
+    return (data || []).map((c) => ({
       version: c.id,
       committed_at: c.created_at,
     }));
@@ -234,7 +239,7 @@ export class GitlabRepoProvider implements ShareProvider {
     ensureConfigured();
 
     const apiBase = getGitlabApiBaseUrl();
-    const { data } = await axios.get(
+    const { data } = await axios.get<GitLabCommit[]>(
       `${apiBase}/projects/${encodeURIComponent(config.api.gitlab.projectId)}/repository/commits`,
       {
         headers: getGitlabHeaders(),
@@ -247,7 +252,7 @@ export class GitlabRepoProvider implements ShareProvider {
       },
     );
 
-    return (data || []).map((c: any) => ({
+    return (data || []).map((c) => ({
       version: c.id,
       committed_at: c.created_at,
     }));
