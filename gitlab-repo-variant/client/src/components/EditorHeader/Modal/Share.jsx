@@ -1,0 +1,148 @@
+import { Banner, Button, Input, Spin, Toast } from "@douyinfe/semi-ui";
+import { useCallback, useContext, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { IdContext } from "../../Workspace";
+import { IconLink } from "@douyinfe/semi-icons";
+import {
+  useAreas,
+  useDiagram,
+  useEnums,
+  useNotes,
+  useTransform,
+  useTypes,
+} from "../../../hooks";
+import { databases } from "../../../data/databases";
+import { MODAL } from "../../../data/constants";
+import { create, patch, SHARE_FILENAME } from "../../../api/gists";
+
+export default function Share({ title, setModal }) {
+  const { t } = useTranslation();
+  const { gistId, setGistId } = useContext(IdContext);
+  const [loading, setLoading] = useState(true);
+  const { tables, relationships, database } = useDiagram();
+  const { notes } = useNotes();
+  const { areas } = useAreas();
+  const { types } = useTypes();
+  const { enums } = useEnums();
+  const { transform } = useTransform();
+  const [error, setError] = useState(null);
+  const url =
+    window.location.origin + window.location.pathname + "?shareId=" + gistId;
+
+  const diagramToString = useCallback(() => {
+    return JSON.stringify({
+      title,
+      tables: tables,
+      relationships: relationships,
+      notes: notes,
+      subjectAreas: areas,
+      database: database,
+      ...(databases[database].hasTypes && { types: types }),
+      ...(databases[database].hasEnums && { enums: enums }),
+      transform: transform,
+    });
+  }, [
+    areas,
+    notes,
+    tables,
+    relationships,
+    database,
+    title,
+    enums,
+    types,
+    transform,
+  ]);
+
+  const unshare = useCallback(async () => {
+    try {
+      const deleted = await patch(gistId, SHARE_FILENAME, undefined);
+      if (deleted) {
+        setGistId("");
+      }
+      setModal(MODAL.NONE);
+    } catch (e) {
+      console.error(e);
+      setError(e);
+    }
+  }, [gistId, setModal, setGistId]);
+
+  useEffect(() => {
+    const updateOrGenerateLink = async () => {
+      try {
+        setLoading(true);
+        if (!gistId || gistId === "") {
+          const id = await create(SHARE_FILENAME, diagramToString());
+          setGistId(id);
+        } else {
+          await patch(gistId, SHARE_FILENAME, diagramToString());
+        }
+      } catch (e) {
+        setError(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    updateOrGenerateLink();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const copyLink = () => {
+    navigator.clipboard
+      .writeText(url)
+      .then(() => {
+        Toast.success(t("copied_to_clipboard"));
+      })
+      .catch(() => {
+        Toast.error(t("oops_smth_went_wrong"));
+      });
+  };
+
+  if (loading)
+    return (
+      <div className="text-blue-500 text-center">
+        <Spin size="middle" />
+        <div>{t("loading")}</div>
+      </div>
+    );
+
+  const getErrorMessage = () => {
+    if (!error) return null;
+    const errorMessage = error?.message || error?.toString() || "";
+    if (errorMessage.includes("Backend URL is not configured")) {
+      return "Sharing is not available. Please configure VITE_BACKEND_URL (GitLab API URL) and VITE_GITLAB_TOKEN (GitLab Personal Access Token) environment variables. See README.md for setup instructions.";
+    }
+    if (errorMessage.includes("401") || errorMessage.includes("Unauthorized")) {
+      return "GitLab authentication failed. Please check your VITE_GITLAB_TOKEN environment variable.";
+    }
+    return t("oops_smth_went_wrong");
+  };
+
+  return (
+    <div>
+      {error && (
+        <Banner
+          description={getErrorMessage()}
+          type="danger"
+          closeIcon={null}
+          fullMode={false}
+        />
+      )}
+      {!error && (
+        <>
+          <div className="flex gap-3">
+            <Input value={url} size="large" readonly />
+          </div>
+          <div className="text-xs mt-2">{t("share_info")}</div>
+          <div className="flex gap-2 mt-3">
+            <Button block onClick={unshare}>
+              {t("unshare")}
+            </Button>
+            <Button block theme="solid" icon={<IconLink />} onClick={copyLink}>
+              {t("copy_link")}
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
