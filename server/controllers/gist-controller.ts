@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { type AxiosError } from 'axios';
+import axios, { type AxiosError } from 'axios';
 import { Request, Response } from 'express';
-import { getShareProvider } from '../services/providers';
-
-const provider = getShareProvider();
+import { IGistCommitItem } from '../interfaces/gist-commit-item';
+import { IGistFile } from '../interfaces/gist-file';
+import { gistsBaseUrl, headers } from '../constants/gist-constants';
+import { GistService } from '../services/gist-service';
 
 function firstParam(value: string | string[] | undefined): string {
   if (!value) return '';
@@ -13,9 +14,34 @@ function firstParam(value: string | string[] | undefined): string {
 async function get(req: Request, res: Response) {
   try {
     const id = firstParam(req.params.id);
+    const { data } = await axios.get(`${gistsBaseUrl}/${id}`, {
+      headers,
+    });
+
+    const {
+      owner,
+      history,
+      forks,
+      user,
+      url,
+      forks_url,
+      commits_url,
+      git_pull_url,
+      git_push_url,
+      html_url,
+      comments_url,
+      ...rest
+    } = data;
+
+    const cleanedFiles = Object.fromEntries(
+      Object.entries(rest.files as Record<string, IGistFile>).map(
+        ([filename, { raw_url, ...fileWithoutRaw }]) => [filename, fileWithoutRaw],
+      ),
+    );
+
     res.status(200).json({
       success: true,
-      data: await provider.getShare({ id }),
+      data: { ...rest, files: cleanedFiles },
     });
   } catch (e) {
     console.error(e);
@@ -37,9 +63,26 @@ async function create(req: Request, res: Response) {
   try {
     const { description, filename, content, public: isGistPublic } = req.body;
 
+    const { data } = await axios.post(
+      gistsBaseUrl,
+      {
+        description: description || '',
+        public: isGistPublic || false,
+        files: {
+          [filename]: { content },
+        },
+      },
+      { headers },
+    );
+
+    const returnData = {
+      id: data.id,
+      files: data.files,
+    };
+
     res.status(200).json({
       success: true,
-      data: await provider.createShareFile({ filename, content, description }),
+      data: returnData,
     });
   } catch (e) {
     console.error(e);
@@ -53,12 +96,31 @@ async function create(req: Request, res: Response) {
 async function update(req: Request, res: Response) {
   try {
     const { filename, content } = req.body;
-
     const id = firstParam(req.params.id);
-    await provider.upsertShareFile({ id, filename, content });
+
+    const { data } = await axios.patch(
+      `${gistsBaseUrl}/${id}`,
+      {
+        files: {
+          [filename]: { content },
+        },
+      },
+      { headers },
+    );
+
+    let deleted = false;
+    if (!Object.entries(data.files).length) {
+      try {
+        await GistService.deleteGist(id);
+        deleted = true;
+      } catch (error) {
+        console.error('Error deleting gist:', error);
+        // Continue even if deletion fails, as the gist is already empty
+      }
+    }
 
     res.status(200).json({
-      deleted: false,
+      deleted,
       success: true,
       message: 'Gist updated',
     });
@@ -81,7 +143,7 @@ async function update(req: Request, res: Response) {
 async function del(req: Request, res: Response) {
   try {
     const id = firstParam(req.params.id);
-    await provider.deleteShare({ id });
+    await GistService.deleteGist(id);
 
     res.status(200).json({
       success: true,
@@ -105,10 +167,15 @@ async function del(req: Request, res: Response) {
 
 async function getCommits(req: Request, res: Response) {
   try {
+    const id = firstParam(req.params.id);
     const page = req.query.page ? parseInt(req.query.page as string) : undefined;
     const perPage = req.query.per_page ? parseInt(req.query.per_page as string) : undefined;
-    const id = firstParam(req.params.id);
-    const cleanData = await provider.listCommits({ id, perPage, page });
+    const data = await GistService.getCommits(id, perPage, page);
+
+    const cleanData = data.map((x: IGistCommitItem) => {
+      const { user, url, ...rest } = x;
+      return rest;
+    });
 
     res.status(200).json({
       success: true,
@@ -133,9 +200,32 @@ async function getRevision(req: Request, res: Response) {
   try {
     const id = firstParam(req.params.id);
     const sha = firstParam(req.params.sha);
+    const data = await GistService.getCommit(id, sha);
+
+    const {
+      owner,
+      history,
+      forks,
+      user,
+      url,
+      forks_url,
+      commits_url,
+      git_pull_url,
+      git_push_url,
+      html_url,
+      comments_url,
+      ...rest
+    } = data;
+
+    const cleanedFiles = Object.fromEntries(
+      Object.entries(rest.files as Record<string, IGistFile>).map(
+        ([filename, { raw_url, ...fileWithoutRaw }]) => [filename, fileWithoutRaw],
+      ),
+    );
+
     res.status(200).json({
       success: true,
-      data: await provider.getShare({ id, ref: sha }),
+      data: { ...rest, files: cleanedFiles },
     });
   } catch (e) {
     if ((e as AxiosError).response?.status === 404) {
@@ -164,17 +254,12 @@ async function getRevisionsForFile(req: Request, res: Response) {
     let page = 1;
     let startProcessing = !cursor;
 
-    const versionsWithChanges: { version: string; committed_at: string }[] = [];
+    const versionsWithChanges: IGistCommitItem[] = [];
     let hasMore = true;
     let nextCursor: string | null = null;
 
     while (versionsWithChanges.length < limit && hasMore) {
-      const commitsBatch = await provider.listFileCommits({
-        id: gistId,
-        filename: file,
-        perPage: batchSize,
-        page,
-      });
+      const commitsBatch = await GistService.getCommits(gistId, batchSize, page);
 
       if (commitsBatch.length === 0) {
         hasMore = false;
@@ -192,12 +277,8 @@ async function getRevisionsForFile(req: Request, res: Response) {
         }
 
         if (versionsWithChanges.length === 0) {
-          const content = await provider.getFileContentAtRef({
-            id: gistId,
-            filename: file,
-            ref: currentCommit.version,
-          });
-          if (content !== null) {
+          const version = await GistService.getCommit(gistId, currentCommit.version);
+          if (version.files[file]) {
             versionsWithChanges.push(currentCommit);
           }
           continue;
@@ -206,19 +287,22 @@ async function getRevisionsForFile(req: Request, res: Response) {
         const lastAddedCommit = versionsWithChanges[versionsWithChanges.length - 1];
 
         try {
-          const [lastContent, currentContent] = await Promise.all([
-            provider.getFileContentAtRef({ id: gistId, filename: file, ref: lastAddedCommit.version }),
-            provider.getFileContentAtRef({ id: gistId, filename: file, ref: currentCommit.version }),
+          const [lastVersion, currentVersion] = await Promise.all([
+            GistService.getCommit(gistId, lastAddedCommit.version),
+            GistService.getCommit(gistId, currentCommit.version),
           ]);
 
-          if (currentContent === null) {
+          if (!currentVersion.files[file]) {
             break;
           }
 
-          if (lastContent === null) {
+          if (!lastVersion.files[file]) {
             versionsWithChanges.push(currentCommit);
             continue;
           }
+
+          const lastContent = lastVersion.files[file].content;
+          const currentContent = currentVersion.files[file].content;
 
           if (lastContent !== currentContent) {
             versionsWithChanges.push(currentCommit);
@@ -240,14 +324,19 @@ async function getRevisionsForFile(req: Request, res: Response) {
       nextCursor = versionsWithChanges[versionsWithChanges.length - 1].version;
     }
 
+    const versions = versionsWithChanges.map((v: IGistCommitItem) => {
+      const { user, url, ...rest } = v;
+      return rest;
+    });
+
     res.status(200).json({
       success: true,
-      data: versionsWithChanges,
+      data: versions,
       pagination: {
         cursor: nextCursor,
         hasMore: nextCursor !== null,
         limit,
-        count: versionsWithChanges.length,
+        count: versions.length,
       },
     });
   } catch (e) {
