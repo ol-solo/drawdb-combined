@@ -54,6 +54,15 @@ async function create(req: Request, res: Response) {
   try {
     const { description, filename, content, public: isGistPublic } = req.body;
 
+    // Валидация обязательных полей
+    if (!content) {
+      res.status(400).json({
+        success: false,
+        message: 'Content is required',
+      });
+      return;
+    }
+
     const data = await GitLabShareService.createShare(content, filename);
 
     const returnData = {
@@ -142,6 +151,16 @@ async function getCommits(req: Request, res: Response) {
   try {
     const page = req.query.page ? parseInt(req.query.page as string) : undefined;
     const perPage = req.query.per_page ? parseInt(req.query.per_page as string) : undefined;
+    
+    // Валидация shareId
+    if (!req.params.id) {
+      res.status(400).json({
+        success: false,
+        message: 'Share ID is required',
+      });
+      return;
+    }
+    
     const data = await GitLabShareService.getCommits(req.params.id, perPage, page);
 
     // Формат уже совместим с IGistCommitItem (без user и url)
@@ -215,7 +234,8 @@ async function getRevisionsForFile(req: Request, res: Response) {
     const file = req.params.file;
 
     const cursor = req.query.cursor as string;
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+    const limitRaw = req.query.limit ? parseInt(req.query.limit as string) : 10;
+    const limit = isNaN(limitRaw) || limitRaw < 1 ? 10 : Math.min(limitRaw, 100); // Максимум 100
 
     const batchSize = Math.max(limit * 2, 50);
     let page = 1;

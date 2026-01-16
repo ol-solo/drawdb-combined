@@ -10,7 +10,11 @@ Create a `.env` file in the `drawdb-combined` directory:
 cd drawdb-combined
 cat > .env << EOF
 PORT=5000
-GITHUB_TOKEN=your_github_token_here
+GITLAB_BASE_URL=https://gitlab.com
+GITLAB_TOKEN=your_gitlab_token_here
+GITLAB_PROJECT_ID=12345678
+GITLAB_REF=main
+SHARES_PATH_PREFIX=shares/
 MAIL_SERVICE=gmail
 MAIL_USERNAME=your_email@gmail.com
 MAIL_PASSWORD=your_app_password

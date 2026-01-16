@@ -7,7 +7,7 @@ A unified single-container setup for DrawDB with nginx reverse proxy.
 - ✅ Single Dockerfile and docker-compose.yml
 - ✅ Nginx and application in one container
 - ✅ Optional SSL/HTTPS support
-- ✅ Optional GitHub token (for sharing feature)
+- ✅ Optional GitLab configuration (for sharing feature)
 - ✅ Optional proxy support
 - ✅ Automatic restart on failure
 - ✅ All configuration in one place (`config/` directory)
@@ -68,8 +68,13 @@ All configuration is in the `config/` directory:
 # Set to your domain name for better security
 SERVER_NAME=mycompany.com
 
-# GitHub token (only if you need sharing feature)
-GITHUB_TOKEN=your_token_here
+# GitLab configuration (only if you need sharing feature)
+# See server/GITLAB_SETUP.md for detailed setup instructions
+GITLAB_BASE_URL=https://gitlab.com
+GITLAB_TOKEN=your_gitlab_token_here
+GITLAB_PROJECT_ID=12345678
+GITLAB_REF=main
+SHARES_PATH_PREFIX=shares/
 
 # Email (only if you need email features)
 MAIL_SERVICE=gmail
@@ -109,7 +114,11 @@ HTTP_PORT=8080 HTTPS_PORT=8443 APP_PORT=5000 docker compose up
 2. Configure `config/.env` with your settings:
    ```bash
    SERVER_NAME=mycompany.com
-   GITHUB_TOKEN=your_token_here
+   GITLAB_BASE_URL=https://gitlab.com
+   GITLAB_TOKEN=your_gitlab_token_here
+   GITLAB_PROJECT_ID=12345678
+   GITLAB_REF=main
+   SHARES_PATH_PREFIX=shares/
    # ... other settings
    ```
 

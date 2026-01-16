@@ -20,7 +20,11 @@ nano .env.prod
 ```
 
 Update:
-- `GITHUB_TOKEN` - Your GitHub personal access token
+- `GITLAB_BASE_URL` - Your GitLab instance URL (e.g., https://gitlab.com)
+- `GITLAB_TOKEN` - Your GitLab personal access token or project access token
+- `GITLAB_PROJECT_ID` - Your GitLab project ID (numeric)
+- `GITLAB_REF` - Git branch name (default: main)
+- `SHARES_PATH_PREFIX` - Path prefix for shares (default: shares/)
 - `CLIENT_URLS` - Your domain (https://mycompany.com)
 - `HTTP_PROXY` / `HTTPS_PROXY` - If you need proxy for internet access
 
@@ -82,7 +86,7 @@ If your VM requires a proxy to access the internet:
    ```
 
 2. The container will use these for:
-   - GitHub API calls (gist operations)
+   - GitLab API calls (share operations)
    - Email sending (if configured)
    - Any external API calls
 
@@ -124,7 +128,7 @@ docker compose -f docker-compose.prod.yml down
 ### Proxy Issues
 - Test proxy connectivity from container:
   ```bash
-  docker compose -f docker-compose.prod.yml exec drawdb-app curl -v https://api.github.com
+  docker compose -f docker-compose.prod.yml exec drawdb-app curl -v https://gitlab.com/api/v4
   ```
 
 ### Port Conflicts
@@ -140,9 +144,10 @@ docker compose -f docker-compose.prod.yml down
 
 1. Keep SSL certificates secure
 2. Regularly update Docker images
-3. Use strong GitHub token with minimal permissions
-4. Monitor logs for suspicious activity
-5. Keep `.env.prod` file secure (don't commit to git)
+3. Use strong GitLab token with minimal permissions (read_repository, write_repository)
+4. Keep GitLab repository private for better security
+5. Monitor logs for suspicious activity
+6. Keep `.env.prod` file secure (don't commit to git)
 
 ## File Structure
 

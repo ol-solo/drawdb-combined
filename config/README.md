@@ -23,7 +23,11 @@ nano .env
 
 **Optional:**
 - `SERVER_NAME` - Domain name for Nginx (e.g., `mycompany.com`). Defaults to `_` (accepts any domain). Set this for better security when using SSL certificates.
-- `GITHUB_TOKEN` - Only needed if you want to use the sharing feature
+- `GITLAB_BASE_URL` - GitLab instance URL (default: https://gitlab.com). Only needed if you want to use the sharing feature.
+- `GITLAB_TOKEN` - GitLab personal access token or project access token. Only needed if you want to use the sharing feature.
+- `GITLAB_PROJECT_ID` - GitLab project ID (numeric). Only needed if you want to use the sharing feature.
+- `GITLAB_REF` - Git branch name (default: main). Only needed if you want to use the sharing feature.
+- `SHARES_PATH_PREFIX` - Path prefix for shares in repository (default: shares/). Only needed if you want to use the sharing feature.
 - `MAIL_*` - Only needed if you want to use email features
 - `CLIENT_URLS` - Only needed for CORS configuration
 - `HTTP_PROXY` / `HTTPS_PROXY` - Only needed if behind a proxy
