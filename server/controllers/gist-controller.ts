@@ -7,7 +7,8 @@ import { GitLabShareService } from '../services/gitlab-share-service';
 
 async function get(req: Request, res: Response) {
   try {
-    const data = await GitLabShareService.getShare(req.params.id);
+    const shareId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const data = await GitLabShareService.getShare(shareId);
 
     // Преобразуем формат для совместимости с фронтендом
     const cleanedFiles = Object.fromEntries(
@@ -88,22 +89,32 @@ async function update(req: Request, res: Response) {
     const { filename, content } = req.body;
 
     // Если content не передан или пустой, удаляем файл
+    const shareId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     let deleted = false;
+    
     if (content === undefined || content === null || content === '') {
       try {
-        await GitLabShareService.deleteShare(req.params.id);
+        await GitLabShareService.deleteShare(shareId);
         deleted = true;
       } catch (error) {
         console.error('Error deleting share:', error);
+        const deleteError = error as Error;
+        if (deleteError.message === 'Share not found') {
+          return res.status(404).json({
+            success: false,
+            message: 'Gist not found',
+          });
+        }
+        throw error; // Пробрасываем другие ошибки
       }
     } else {
-      await GitLabShareService.updateShare(req.params.id, content, filename);
+      await GitLabShareService.updateShare(shareId, content, filename);
     }
 
     res.status(200).json({
       deleted,
       success: true,
-      message: 'Gist updated',
+      message: deleted ? 'Gist deleted' : 'Gist updated',
     });
   } catch (e) {
     console.error(e);
@@ -124,7 +135,8 @@ async function update(req: Request, res: Response) {
 
 async function del(req: Request, res: Response) {
   try {
-    await GitLabShareService.deleteShare(req.params.id);
+    const shareId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    await GitLabShareService.deleteShare(shareId);
 
     res.status(200).json({
       success: true,
@@ -153,7 +165,8 @@ async function getCommits(req: Request, res: Response) {
     const perPage = req.query.per_page ? parseInt(req.query.per_page as string) : undefined;
     
     // Валидация shareId
-    if (!req.params.id) {
+    const shareId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    if (!shareId) {
       res.status(400).json({
         success: false,
         message: 'Share ID is required',
@@ -161,7 +174,7 @@ async function getCommits(req: Request, res: Response) {
       return;
     }
     
-    const data = await GitLabShareService.getCommits(req.params.id, perPage, page);
+    const data = await GitLabShareService.getCommits(shareId, perPage, page);
 
     // Формат уже совместим с IGistCommitItem (без user и url)
     res.status(200).json({
@@ -186,7 +199,9 @@ async function getCommits(req: Request, res: Response) {
 
 async function getRevision(req: Request, res: Response) {
   try {
-    const data = await GitLabShareService.getShareByRevision(req.params.id, req.params.sha);
+    const shareId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const commitSha = Array.isArray(req.params.sha) ? req.params.sha[0] : req.params.sha;
+    const data = await GitLabShareService.getShareByRevision(shareId, commitSha);
 
     // Преобразуем формат для совместимости с фронтендом
     const cleanedFiles = Object.fromEntries(
@@ -230,8 +245,8 @@ async function getRevision(req: Request, res: Response) {
 
 async function getRevisionsForFile(req: Request, res: Response) {
   try {
-    const shareId = req.params.id;
-    const file = req.params.file;
+    const shareId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const file = Array.isArray(req.params.file) ? req.params.file[0] : req.params.file;
 
     const cursor = req.query.cursor as string;
     const limitRaw = req.query.limit ? parseInt(req.query.limit as string) : 10;

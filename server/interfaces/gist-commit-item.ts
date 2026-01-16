@@ -1,5 +1,5 @@
 export interface IGistCommitItem {
-  user: unknown;
+  user?: unknown;
   version: string;
   commited_at: string;
   change_status: {
@@ -7,5 +7,5 @@ export interface IGistCommitItem {
     additions: number;
     deletions: number;
   };
-  url: string;
+  url?: string;
 }

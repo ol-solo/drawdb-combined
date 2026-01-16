@@ -77,7 +77,7 @@ export function validateFilename(filename: string | undefined): string {
   
   // Удаляем опасные символы и пути
   const sanitized = filename
-    .replace(/[\/\\\?\*\|"<>:]/g, '') // Удаляем опасные символы
+    .replace(/[/\\?*|"<>:]/g, '') // Удаляем опасные символы
     .replace(/^\.+/, '') // Удаляем ведущие точки
     .trim();
   

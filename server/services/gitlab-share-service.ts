@@ -35,7 +35,7 @@ export const GitLabShareService = {
     const actualFilename = validateFilename(filename);
 
     try {
-      const { data } = await axios.post(
+      await axios.post(
         `${gitlabBaseUrl}/projects/${projectId}/repository/files/${encodeURIComponent(filePath)}`,
         {
           branch: defaultRef,
@@ -66,7 +66,7 @@ export const GitLabShareService = {
             // Прямо формируем путь без валидации, т.к. UUID всегда валиден
             const newFilePath = `${sharesPathPrefix}${newShareId}.json`;
             try {
-              const { data } = await axios.post(
+              await axios.post(
                 `${gitlabBaseUrl}/projects/${projectId}/repository/files/${encodeURIComponent(newFilePath)}`,
                 {
                   branch: defaultRef,
@@ -82,7 +82,7 @@ export const GitLabShareService = {
                   [actualFilename]: { content },
                 },
               };
-            } catch (retryError) {
+            } catch {
               retries++;
               if (retries >= maxRetries) {
                 throw new Error('Failed to create share after multiple attempts');
@@ -159,7 +159,7 @@ export const GitLabShareService = {
     const actualFilename = validateFilename(filename);
 
     try {
-      const { data } = await axios.put(
+      await axios.put(
         `${gitlabBaseUrl}/projects/${projectId}/repository/files/${encodeURIComponent(filePath)}`,
         {
           branch: defaultRef,
@@ -251,7 +251,17 @@ export const GitLabShareService = {
         return [];
       }
 
-      return data.map((commit: any) => {
+      interface GitLabCommit {
+        id: string;
+        committed_date?: string;
+        created_at?: string;
+        stats?: {
+          additions?: number;
+          deletions?: number;
+        };
+      }
+
+      return data.map((commit: GitLabCommit) => {
         // Проверяем наличие обязательных полей
         if (!commit || !commit.id) {
           return null;

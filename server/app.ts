@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import { emailRouter } from './routes/email-route';
 import { gistRouter } from './routes/gist-route';
 import { config } from './config';
@@ -37,11 +38,33 @@ app.get('*', (req, res) => {
   if (req.path.startsWith('/email') || req.path.startsWith('/gists')) {
     return res.status(404).json({ error: 'Not found' });
   }
-  res.sendFile(path.join(frontendDistPath, 'index.html'), (err) => {
-    if (err) {
-      res.status(404).json({ error: 'Not found' });
-    }
-  });
+  
+  // Check if frontend dist exists before trying to serve it
+  const indexHtmlPath = path.join(frontendDistPath, 'index.html');
+  
+  if (fs.existsSync(indexHtmlPath)) {
+    res.sendFile(indexHtmlPath, (err) => {
+      if (err) {
+        res.status(404).json({ 
+          error: 'Not found',
+          message: 'Frontend not available. This is an API server.',
+          endpoints: {
+            gists: '/gists',
+            email: '/email'
+          }
+        });
+      }
+    });
+  } else {
+    res.status(404).json({ 
+      error: 'Not found',
+      message: 'Frontend not built. This is an API server.',
+      endpoints: {
+        gists: '/gists',
+        email: '/email'
+      }
+    });
+  }
 });
 
 export default app;
