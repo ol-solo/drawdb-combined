@@ -1,4 +1,4 @@
-# DrawDB Combined
+# DrawDB Gitlab
 
 A unified single-container setup for DrawDB with nginx reverse proxy.
 
