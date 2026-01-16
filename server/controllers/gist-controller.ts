@@ -1,45 +1,42 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import axios, { type AxiosError } from 'axios';
+import { type AxiosError } from 'axios';
 import { Request, Response } from 'express';
 import { IGistCommitItem } from '../interfaces/gist-commit-item';
 import { IGistFile } from '../interfaces/gist-file';
-import { gistsBaseUrl, headers } from '../constants/gist-constants';
-import { GistService } from '../services/gist-service';
+import { GitLabShareService } from '../services/gitlab-share-service';
 
 async function get(req: Request, res: Response) {
   try {
-    const { data } = await axios.get(`${gistsBaseUrl}/${req.params.id}`, {
-      headers,
-    });
+    const data = await GitLabShareService.getShare(req.params.id);
 
-    const {
-      owner,
-      history,
-      forks,
-      user,
-      url,
-      forks_url,
-      commits_url,
-      git_pull_url,
-      git_push_url,
-      html_url,
-      comments_url,
-      ...rest
-    } = data;
-
+    // Преобразуем формат для совместимости с фронтендом
     const cleanedFiles = Object.fromEntries(
-      Object.entries(rest.files as Record<string, IGistFile>).map(
-        ([filename, { raw_url, ...fileWithoutRaw }]) => [filename, fileWithoutRaw],
-      ),
+      Object.entries(data.files).map(([filename, fileData]) => [
+        filename,
+        {
+          filename: fileData.filename || filename,
+          content: fileData.content,
+          type: 'application/json',
+          language: 'JSON',
+          size: fileData.content.length,
+          truncated: false,
+        },
+      ]),
     );
 
     res.status(200).json({
       success: true,
-      data: { ...rest, files: cleanedFiles },
+      data: {
+        id: data.id,
+        files: cleanedFiles,
+        updated_at: data.updated_at,
+        created_at: data.created_at,
+      },
     });
   } catch (e) {
     console.error(e);
-    if ((e as AxiosError).response?.status === 404) {
+    const error = e as Error;
+    if (error.message === 'Share not found') {
       res.status(404).json({
         success: false,
         message: 'Gist not found',
@@ -57,17 +54,7 @@ async function create(req: Request, res: Response) {
   try {
     const { description, filename, content, public: isGistPublic } = req.body;
 
-    const { data } = await axios.post(
-      gistsBaseUrl,
-      {
-        description: description || '',
-        public: isGistPublic || false,
-        files: {
-          [filename]: { content },
-        },
-      },
-      { headers },
-    );
+    const data = await GitLabShareService.createShare(content, filename);
 
     const returnData = {
       id: data.id,
@@ -91,25 +78,17 @@ async function update(req: Request, res: Response) {
   try {
     const { filename, content } = req.body;
 
-    const { data } = await axios.patch(
-      `${gistsBaseUrl}/${req.params.id}`,
-      {
-        files: {
-          [filename]: { content },
-        },
-      },
-      { headers },
-    );
-
+    // Если content не передан или пустой, удаляем файл
     let deleted = false;
-    if (!Object.entries(data.files).length) {
+    if (content === undefined || content === null || content === '') {
       try {
-        await GistService.deleteGist(req.params.id);
+        await GitLabShareService.deleteShare(req.params.id);
         deleted = true;
       } catch (error) {
-        console.error('Error deleting gist:', error);
-        // Continue even if deletion fails, as the gist is already empty
+        console.error('Error deleting share:', error);
       }
+    } else {
+      await GitLabShareService.updateShare(req.params.id, content, filename);
     }
 
     res.status(200).json({
@@ -119,7 +98,8 @@ async function update(req: Request, res: Response) {
     });
   } catch (e) {
     console.error(e);
-    if ((e as AxiosError).response?.status === 404) {
+    const error = e as Error;
+    if (error.message === 'Share not found') {
       res.status(404).json({
         success: false,
         message: 'Gist not found',
@@ -135,7 +115,7 @@ async function update(req: Request, res: Response) {
 
 async function del(req: Request, res: Response) {
   try {
-    await GistService.deleteGist(req.params.id);
+    await GitLabShareService.deleteShare(req.params.id);
 
     res.status(200).json({
       success: true,
@@ -143,7 +123,8 @@ async function del(req: Request, res: Response) {
     });
   } catch (e) {
     console.error(e);
-    if ((e as AxiosError).response?.status === 404) {
+    const error = e as Error;
+    if (error.message === 'Share not found') {
       res.status(404).json({
         success: false,
         message: 'Gist not found',
@@ -161,19 +142,16 @@ async function getCommits(req: Request, res: Response) {
   try {
     const page = req.query.page ? parseInt(req.query.page as string) : undefined;
     const perPage = req.query.per_page ? parseInt(req.query.per_page as string) : undefined;
-    const data = await GistService.getCommits(req.params.id, perPage, page);
+    const data = await GitLabShareService.getCommits(req.params.id, perPage, page);
 
-    const cleanData = data.map((x: IGistCommitItem) => {
-      const { user, url, ...rest } = x;
-      return rest;
-    });
-
+    // Формат уже совместим с IGistCommitItem (без user и url)
     res.status(200).json({
       success: true,
-      data: cleanData,
+      data: data,
     });
   } catch (e) {
-    if ((e as AxiosError).response?.status === 404) {
+    const error = e as Error;
+    if (error.message === 'Share not found') {
       res.status(404).json({
         success: false,
         message: 'Gist not found',
@@ -189,35 +167,35 @@ async function getCommits(req: Request, res: Response) {
 
 async function getRevision(req: Request, res: Response) {
   try {
-    const data = await GistService.getCommit(req.params.id, req.params.sha);
+    const data = await GitLabShareService.getShareByRevision(req.params.id, req.params.sha);
 
-    const {
-      owner,
-      history,
-      forks,
-      user,
-      url,
-      forks_url,
-      commits_url,
-      git_pull_url,
-      git_push_url,
-      html_url,
-      comments_url,
-      ...rest
-    } = data;
-
+    // Преобразуем формат для совместимости с фронтендом
     const cleanedFiles = Object.fromEntries(
-      Object.entries(rest.files as Record<string, IGistFile>).map(
-        ([filename, { raw_url, ...fileWithoutRaw }]) => [filename, fileWithoutRaw],
-      ),
+      Object.entries(data.files).map(([filename, fileData]) => [
+        filename,
+        {
+          filename: fileData.filename || filename,
+          content: fileData.content,
+          type: 'application/json',
+          language: 'JSON',
+          size: fileData.content.length,
+          truncated: false,
+        },
+      ]),
     );
 
     res.status(200).json({
       success: true,
-      data: { ...rest, files: cleanedFiles },
+      data: {
+        id: data.id,
+        files: cleanedFiles,
+        updated_at: data.updated_at,
+        created_at: data.created_at,
+      },
     });
   } catch (e) {
-    if ((e as AxiosError).response?.status === 404) {
+    const error = e as Error;
+    if (error.message === 'Share or revision not found' || error.message === 'Share not found') {
       res.status(404).json({
         success: false,
         message: 'Gist not found',
@@ -233,7 +211,7 @@ async function getRevision(req: Request, res: Response) {
 
 async function getRevisionsForFile(req: Request, res: Response) {
   try {
-    const gistId = req.params.id;
+    const shareId = req.params.id;
     const file = req.params.file;
 
     const cursor = req.query.cursor as string;
@@ -248,7 +226,7 @@ async function getRevisionsForFile(req: Request, res: Response) {
     let nextCursor: string | null = null;
 
     while (versionsWithChanges.length < limit && hasMore) {
-      const commitsBatch = await GistService.getCommits(gistId, batchSize, page);
+      const commitsBatch = await GitLabShareService.getCommits(shareId, batchSize, page);
 
       if (commitsBatch.length === 0) {
         hasMore = false;
@@ -266,7 +244,7 @@ async function getRevisionsForFile(req: Request, res: Response) {
         }
 
         if (versionsWithChanges.length === 0) {
-          const version = await GistService.getCommit(gistId, currentCommit.version);
+          const version = await GitLabShareService.getShareByRevision(shareId, currentCommit.version);
           if (version.files[file]) {
             versionsWithChanges.push(currentCommit);
           }
@@ -277,8 +255,8 @@ async function getRevisionsForFile(req: Request, res: Response) {
 
         try {
           const [lastVersion, currentVersion] = await Promise.all([
-            GistService.getCommit(gistId, lastAddedCommit.version),
-            GistService.getCommit(gistId, currentCommit.version),
+            GitLabShareService.getShareByRevision(shareId, lastAddedCommit.version),
+            GitLabShareService.getShareByRevision(shareId, currentCommit.version),
           ]);
 
           if (!currentVersion.files[file]) {
@@ -313,23 +291,20 @@ async function getRevisionsForFile(req: Request, res: Response) {
       nextCursor = versionsWithChanges[versionsWithChanges.length - 1].version;
     }
 
-    const versions = versionsWithChanges.map((v: IGistCommitItem) => {
-      const { user, url, ...rest } = v;
-      return rest;
-    });
-
+    // Формат уже совместим (без user и url)
     res.status(200).json({
       success: true,
-      data: versions,
+      data: versionsWithChanges,
       pagination: {
         cursor: nextCursor,
         hasMore: nextCursor !== null,
         limit,
-        count: versions.length,
+        count: versionsWithChanges.length,
       },
     });
   } catch (e) {
-    if ((e as AxiosError).response?.status === 404) {
+    const error = e as Error;
+    if (error.message === 'Share not found' || error.message === 'Share or revision not found') {
       res.status(404).json({
         success: false,
         message: 'Gist not found',
