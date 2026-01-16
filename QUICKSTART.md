@@ -4,10 +4,10 @@
 
 ### 1. Create Environment File
 
-Create a `.env` file in the `drawdb-combined` directory:
+Create a `.env` file in the `drawdb-gitlab` directory:
 
 ```bash
-cd drawdb-combined
+cd drawdb-gitlab
 cat > .env << EOF
 PORT=5000
 GITLAB_BASE_URL=https://gitlab.com
@@ -37,7 +37,7 @@ That's it! 🎉
 ## 📁 What's Inside?
 
 ```
-drawdb-combined/
+drawdb-gitlab/
 ├── client/          # Frontend React app
 ├── server/          # Backend Express API
 ├── Dockerfile       # Builds everything
@@ -47,8 +47,8 @@ drawdb-combined/
 ## 🔧 Alternative: Docker Direct
 
 ```bash
-docker build -t drawdb-combined .
-docker run -p 5000:5000 --env-file .env drawdb-combined
+docker build -t drawdb-gitlab .
+docker run -p 5000:5000 --env-file .env drawdb-gitlab
 ```
 
 ## 📝 Notes

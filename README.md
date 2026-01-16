@@ -165,7 +165,7 @@ docker compose restart
 ## File Structure
 
 ```
-drawdb-combined/
+drawdb-gitlab/
 ├── config/              # All configuration
 │   ├── .env            # Environment variables (create from .env.example)
 │   ├── .env.example    # Example environment file

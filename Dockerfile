@@ -1,5 +1,5 @@
-# Unified Dockerfile for drawdb-combined with nginx
-# Build from drawdb-combined directory: docker build -t drawdb-combined .
+# Unified Dockerfile for drawdb-gitlab with nginx
+# Build from drawdb-gitlab directory: docker build -t drawdb-gitlab .
 
 # Stage 1: Build frontend
 FROM node:20-alpine AS frontend-build

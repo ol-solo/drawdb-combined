@@ -33,8 +33,8 @@ Update:
 #### Option A: Your Own Certificates
 ```bash
 # Place certificates in nginx/ssl/
-cp your-cert.pem drawdb-combined/nginx/ssl/cert.pem
-cp your-key.pem drawdb-combined/nginx/ssl/key.pem
+cp your-cert.pem drawdb-gitlab/nginx/ssl/cert.pem
+cp your-key.pem drawdb-gitlab/nginx/ssl/key.pem
 ```
 
 #### Option B: Let's Encrypt
@@ -57,7 +57,7 @@ Edit `nginx/nginx.conf`:
 ### 4. Build and Deploy
 
 ```bash
-cd drawdb-combined
+cd drawdb-gitlab
 
 # Build and start services
 docker compose -f docker-compose.prod.yml --env-file ../.env.prod up -d --build
@@ -152,7 +152,7 @@ docker compose -f docker-compose.prod.yml down
 ## File Structure
 
 ```
-drawdb-combined/
+drawdb-gitlab/
 ├── Dockerfile.prod          # Production Dockerfile
 ├── docker-compose.prod.yml  # Production compose file
 ├── nginx/
